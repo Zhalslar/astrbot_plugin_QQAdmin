@@ -87,9 +87,6 @@ class AdminPlugin(Star):
         self.last_banned_time: dict[str, dict[str, float]] = defaultdict(
             lambda: defaultdict(float)
         )
-        self.last_banned_time: dict[str, dict[str, float]] = defaultdict(
-            lambda: defaultdict(float)
-        )
 
         self.enable_audit: bool = self.config.get("enable_audit", False)
         self.admin_audit: bool = self.config.get("admin_audit", False)
@@ -452,10 +449,6 @@ class AdminPlugin(Star):
                 all(interval < self.min_interval for interval in intervals)
                 and self.spamming_ban_time
             ):
-
-                # 提前写入禁止标记，防止并发重复禁
-                self.last_banned_time[group_id][user_id] = now
-
                 # 提前写入禁止标记，防止并发重复禁
                 self.last_banned_time[group_id][user_id] = now
 
@@ -465,11 +458,6 @@ class AdminPlugin(Star):
                         user_id=int(user_id),
                         duration=self.spamming_ban_time,
                     )
-                    yield event.plain_result(
-                        f"检测到{get_nickname(event, user_id)}刷屏，已禁言"
-                    )
-                    nickname = await get_nickname(event, user_id)
-                    yield event.plain_result(f"检测到{nickname}刷屏，已禁言")
                     nickname = await get_nickname(event, user_id)
                     yield event.plain_result(f"检测到{nickname}刷屏，已禁言")
                 except Exception as e:
