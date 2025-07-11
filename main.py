@@ -84,18 +84,12 @@ class AdminPlugin(Star):
         self.msg_timestamps: dict[str, dict[str, deque[float]]] = defaultdict(
             lambda: defaultdict(lambda: deque(maxlen=self.min_count))
         )
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-=======
         self.last_banned_time: dict[str, dict[str, float]] = defaultdict(
             lambda: defaultdict(float)
         )
->>>>>>> Stashed changes
-=======
         self.last_banned_time: dict[str, dict[str, float]] = defaultdict(
             lambda: defaultdict(float)
         )
->>>>>>> Stashed changes
 
         self.enable_audit: bool = self.config.get("enable_audit", False)
         self.admin_audit: bool = self.config.get("admin_audit", False)
@@ -443,19 +437,11 @@ class AdminPlugin(Star):
         user_id = event.get_sender_id()
         now = time.time()
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-=======
-=======
->>>>>>> Stashed changes
         last_time = self.last_banned_time[group_id][user_id]
         if now - last_time < self.spamming_ban_time:
             return
 
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
+
         timestamps = self.msg_timestamps[group_id][user_id]
         timestamps.append(now)
 
@@ -466,36 +452,26 @@ class AdminPlugin(Star):
                 all(interval < self.min_interval for interval in intervals)
                 and self.spamming_ban_time
             ):
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-=======
+
                 # 提前写入禁止标记，防止并发重复禁
                 self.last_banned_time[group_id][user_id] = now
->>>>>>> Stashed changes
-=======
+
                 # 提前写入禁止标记，防止并发重复禁
                 self.last_banned_time[group_id][user_id] = now
->>>>>>> Stashed changes
+
                 try:
                     await event.bot.set_group_ban(
                         group_id=int(group_id),
                         user_id=int(user_id),
                         duration=self.spamming_ban_time,
                     )
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-
                     yield event.plain_result(
                         f"检测到{get_nickname(event, user_id)}刷屏，已禁言"
                     )
-=======
                     nickname = await get_nickname(event, user_id)
                     yield event.plain_result(f"检测到{nickname}刷屏，已禁言")
->>>>>>> Stashed changes
-=======
                     nickname = await get_nickname(event, user_id)
                     yield event.plain_result(f"检测到{nickname}刷屏，已禁言")
->>>>>>> Stashed changes
                 except Exception as e:
                     logger.warning(f"刷屏禁言失败：{e}")
                 timestamps.clear()
