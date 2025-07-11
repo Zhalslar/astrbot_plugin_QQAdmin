@@ -82,9 +82,8 @@
     "items": {
       "forbidden_words": {
         "description": "违禁词",
-        "type": "text",
-        "hint": "包含关键词的消息将被撤回，并禁言发送者，违禁词之间用中文逗号隔开",
-        "default": ""
+        "type": "list",
+        "hint": "包含关键词的消息将被撤回，并禁言发送者"
       },
       "forbidden_words_group": {
         "description": "检测违禁词的群聊白名单",
@@ -109,15 +108,15 @@
         "description": "刷屏判断的消息数量阈值",
         "type": "int",
         "hint": "当用户在短时间内连续发送至少该数量的消息时，触发刷屏检测, 填0表示不启用刷屏检测",
-        "default": 4
+        "default": 0
       },
       "min_interval": {
         "description": "连续消息的最大允许间隔",
         "type": "float",
         "hint": "单位：秒；若连续消息之间的时间间隔都小于该值，则视为刷屏",
-        "default": 1
+        "default": 0.5
       },
-      "ban_time": {
+      "spamming_ban_time": {
         "description": "刷屏后的禁言时长",
         "type": "int",
         "hint": "单位：秒",
