@@ -129,8 +129,7 @@ class PermissionManager:
 
         required_level = self.perms.get(perm_key)
         if required_level is None:
-            logger.error(f"未配置权限项: {perm_key}")
-            return "无法执行未知权限的操作"
+            return None
 
         if user_level > required_level:
             return f"你没{required_level}权限"
