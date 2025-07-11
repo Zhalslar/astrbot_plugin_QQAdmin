@@ -423,7 +423,7 @@ class AdminPlugin(Star):
     @perm_required(PermLevel.ADMIN)
     async def spamming_ban(self, event: AiocqhttpMessageEvent):
         """刷屏检测与禁言"""
-        if self.min_count ==0:
+        if self.min_count == 0 or len(event.get_messages()) == 0:
             return
         group_id = event.get_group_id()
         if (
