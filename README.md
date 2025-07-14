@@ -93,6 +93,7 @@ git clone https://github.com/Zhalslar/astrbot_plugin_QQAdmin
 
 - 本插件目前仅测试了napcat协议端，其他协议端可能会存在一些不兼容问题（以具体情况为准）
 - 想第一时间得到反馈的可以来作者的插件反馈群（QQ群）：460973561（不点star不给进）
+- 群管插件目前功能已基本稳定，建议非必要不更新
 
 ## 👥 贡献指南
 
