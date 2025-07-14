@@ -92,19 +92,24 @@ class CurfewManager:
                 # 获取当前北京时间 (UTC+8)
                 current_dt = datetime.now(BEIJING_TIMEZONE)
                 current_date = current_dt.date()
-
-                # 创建带日期的起止时间对象（北京时区）
-                start_dt = datetime.combine(current_date, self.start_time).replace(
-                    tzinfo=BEIJING_TIMEZONE
-                )
-                end_dt = datetime.combine(current_date, self.end_time).replace(
-                    tzinfo=BEIJING_TIMEZONE
-                )
-
-                # 处理跨天宵禁逻辑
                 if self.start_time >= self.end_time:
-                    # 如果结束时间在第二天，则加一天
-                    end_dt += timedelta(days=1)
+                    # 跨天宵禁逻辑
+                    if current_dt.time() < self.end_time:
+                        # 当前在第二天的凌晨，起始时间应为昨天
+                        start_dt = datetime.combine(current_date - timedelta(days=1), self.start_time)
+                        end_dt = datetime.combine(current_date, self.end_time)
+                    else:
+                        # 当前在第一天晚上，结束时间为第二天
+                        start_dt = datetime.combine(current_date, self.start_time)
+                        end_dt = datetime.combine(current_date + timedelta(days=1), self.end_time)
+                else:
+                    # 不跨天，直接使用当天的时间
+                    start_dt = datetime.combine(current_date, self.start_time)
+                    end_dt = datetime.combine(current_date, self.end_time)
+
+                # 设置为北京时区
+                start_dt = start_dt.replace(tzinfo=BEIJING_TIMEZONE)
+                end_dt = end_dt.replace(tzinfo=BEIJING_TIMEZONE)
 
                 # 判断是否在宵禁时段内
                 is_during_curfew = start_dt <= current_dt < end_dt
