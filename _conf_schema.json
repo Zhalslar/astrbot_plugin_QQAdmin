@@ -84,6 +84,7 @@
         "description": "违禁词",
         "type": "list",
         "hint": "包含关键词的消息将被撤回，并禁言发送者"
+        "default": []
       },
       "forbidden_words_group": {
         "description": "检测违禁词的群聊白名单",
