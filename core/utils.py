@@ -106,9 +106,7 @@ def get_reply_message_str(event: AiocqhttpMessageEvent) -> str | None:
     """
     获取被引用的消息解析后的纯文本消息字符串。
     """
-    return next(
-        seg.message_str for seg in event.message_obj.message if isinstance(seg, Reply)
-    )
+    return next((seg.message_str for seg in event.message_obj.message if isinstance(seg, Reply)), "")
 
 
 def format_time(timestamp):
