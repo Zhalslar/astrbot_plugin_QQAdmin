@@ -92,7 +92,7 @@ class PermissionManager:
         self, event: AiocqhttpMessageEvent, user_id: str | int
     ) -> PermLevel:
         group_id = event.get_group_id()
-        if not group_id:
+        if int(group_id) == 0 or int(user_id) == 0:
             return PermLevel.UNKNOWN
         if str(user_id) in self.superusers:
             return PermLevel.SUPERUSER
@@ -173,8 +173,6 @@ def perm_required(
 
             # 仅限群聊
             if event.is_private_chat():
-                yield event.plain_result("该功能仅限群聊使用")
-                event.stop_event()
                 return
 
             # 权限管理未初始化

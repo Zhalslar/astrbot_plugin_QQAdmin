@@ -1,5 +1,7 @@
 import asyncio
 from datetime import datetime, time, timedelta, timezone
+import json
+from pathlib import Path
 from typing import Optional
 
 from aiocqhttp import CQHttp
@@ -7,9 +9,9 @@ from astrbot import logger
 
 # 创建北京时区对象 (UTC+8)
 BEIJING_TIMEZONE = timezone(timedelta(hours=8))
+CURFEW_DATA_PATH = Path("data/curfew_tasks.json")
 
-
-class CurfewManager:
+class Curfew:
     """
     管理群组宵禁功能的类。
     每个 CurfewManager 实例负责一个群组的宵禁状态和调度。
@@ -175,3 +177,96 @@ class CurfewManager:
             logger.info(f"群 {self.group_id} 已解除全体禁言。")
         except Exception as e:
             logger.error(f"群 {self.group_id} 宵禁解除失败: {e}", exc_info=True)
+
+
+class CurfewManager:
+    """统一管理群宵禁任务及其持久化"""
+
+    def __init__(self, bot):
+        self.bot = bot
+        self.tasks: dict[str, Curfew] = {}
+        self.load_tasks()
+
+    def load_tasks(self):
+        """从JSON加载所有宵禁任务（用于重启恢复）"""
+        if not CURFEW_DATA_PATH.exists():
+            logger.info("未找到宵禁数据文件，跳过加载。")
+            return
+
+        try:
+            with open(CURFEW_DATA_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception as e:
+            logger.error(f"加载宵禁任务失败：{e}", exc_info=True)
+            return
+
+        for group_id, times in data.items():
+            try:
+                cw = Curfew(
+                    bot=self.bot,
+                    group_id=group_id,
+                    start_time_str=times["start_time"],
+                    end_time_str=times["end_time"],
+                )
+                self.tasks[group_id] = cw
+                asyncio.create_task(cw.start_curfew_task())
+                logger.info(f"群 {group_id} 的宵禁任务已恢复。")
+            except Exception as e:
+                logger.error(f"恢复群 {group_id} 的宵禁任务失败：{e}", exc_info=True)
+
+    def save_tasks(self):
+        """将当前所有任务信息保存到JSON"""
+        try:
+            CURFEW_DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
+            with open(CURFEW_DATA_PATH, "w", encoding="utf-8") as f:
+                json.dump(
+                    {
+                        gid: {
+                            "start_time": cm._start_time_str,
+                            "end_time": cm._end_time_str,
+                        }
+                        for gid, cm in self.tasks.items()
+                    },
+                    f,
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            logger.info("宵禁任务数据已保存。")
+        except Exception as e:
+            logger.error(f"保存宵禁任务失败：{e}", exc_info=True)
+
+    async def stop_all_tasks(self):
+        """关闭并保存所有宵禁任务"""
+        for cw in self.tasks.values():
+            await cw.stop_curfew_task()
+        self.save_tasks()
+
+    async def enable_curfew(
+        self, group_id: str, start_time: str, end_time: str
+    ):
+        """对外接口：开启一个群的宵禁任务"""
+        if group_id in self.tasks:
+            await self.tasks[group_id].stop_curfew_task()
+
+        cw = Curfew(self.bot, group_id, start_time, end_time)
+        self.tasks[group_id] = cw
+        await cw.start_curfew_task()
+        self.save_tasks()
+        logger.info(f"群 {group_id} 的宵禁任务已添加并启动")
+
+
+    async def disable_curfew(self, group_id: str) -> bool:
+        """对外接口：关闭一个群的宵禁任务"""
+        cw = self.tasks.pop(group_id, None)
+        if cw:
+            await cw.stop_curfew_task()
+            self.save_tasks()
+            logger.info(f"群 {group_id} 的宵禁任务已停止并移除。")
+            return True
+        else:
+            logger.warning(f"尝试关闭不存在的宵禁任务：群 {group_id}")
+            return False
+
+    def get_task(self, group_id: str) -> Curfew | None:
+        """获取某个群的宵禁管理器（供外部调用）"""
+        return self.tasks.get(group_id)

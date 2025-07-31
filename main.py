@@ -35,7 +35,7 @@ from .core.utils import *
     "astrbot_plugin_QQAdmin",
     "Zhalslar",
     "群管插件，帮助你管理群聊",
-    "3.0.7",
+    "3.0.8",
     "https://github.com/Zhalslar/astrbot_plugin_QQAdmin",
 )
 class AdminPlugin(Star):
@@ -44,7 +44,6 @@ class AdminPlugin(Star):
         self.admins_id: set[str] = set(context.get_config().get("admins_id", []))
         self.config = config
         self._load_config()
-        self.curfew_managers: dict[str, CurfewManager] = {}
 
     def _load_config(self):
         """加载并初始化插件配置"""
@@ -63,7 +62,9 @@ class AdminPlugin(Star):
         forbidden_config = self.config.get("forbidden_config", {})
         raw_words = forbidden_config.get("forbidden_words", "")
         if isinstance(raw_words, str):
-            self.forbidden_words = [word.strip() for word in raw_words.split("，") if word.strip()]
+            self.forbidden_words = [
+                word.strip() for word in raw_words.split("，") if word.strip()
+            ]
         elif isinstance(raw_words, list):
             self.forbidden_words = [word.strip() for word in raw_words if word.strip()]
         else:
@@ -107,6 +108,8 @@ class AdminPlugin(Star):
         self.plugin_data_dir = StarTools.get_data_dir("astrbot_plugin_QQAdmin")
         group_join_data = os.path.join(self.plugin_data_dir, "group_join_data.json")
         self.group_join_manager = GroupJoinManager(group_join_data)
+        # 初始化宵禁管理器（延时初始化）
+        self.cm = None
         # 概率打印LOGO（qwq）
         if random.random() < 0.01:
             print_logo()
@@ -423,42 +426,45 @@ class AdminPlugin(Star):
     @perm_required(PermLevel.ADMIN)
     async def spamming_ban(self, event: AiocqhttpMessageEvent):
         """刷屏检测与禁言"""
-        if self.min_count == 0 or len(event.get_messages()) == 0:
-            return
         group_id = event.get_group_id()
+        sender_id = event.get_sender_id()
+        if (
+            sender_id == event.get_self_id()
+            or self.min_count == 0
+            or len(event.get_messages()) == 0
+        ):
+            return
         if (
             self.spamming_group_whitelist
             and group_id not in self.spamming_group_whitelist
         ):
             return
-        user_id = event.get_sender_id()
         now = time.time()
 
-        last_time = self.last_banned_time[group_id][user_id]
+        last_time = self.last_banned_time[group_id][sender_id]
         if now - last_time < self.spamming_ban_time:
             return
 
-
-        timestamps = self.msg_timestamps[group_id][user_id]
+        timestamps = self.msg_timestamps[group_id][sender_id]
         timestamps.append(now)
 
         if len(timestamps) >= self.min_count:
-            recent = list(timestamps)[-self.min_count:]
+            recent = list(timestamps)[-self.min_count :]
             intervals = [recent[i + 1] - recent[i] for i in range(self.min_count - 1)]
             if (
                 all(interval < self.min_interval for interval in intervals)
                 and self.spamming_ban_time
             ):
                 # 提前写入禁止标记，防止并发重复禁
-                self.last_banned_time[group_id][user_id] = now
+                self.last_banned_time[group_id][sender_id] = now
 
                 try:
                     await event.bot.set_group_ban(
                         group_id=int(group_id),
-                        user_id=int(user_id),
+                        user_id=int(sender_id),
                         duration=self.spamming_ban_time,
                     )
-                    nickname = await get_nickname(event, user_id)
+                    nickname = await get_nickname(event, sender_id)
                     yield event.plain_result(f"检测到{nickname}刷屏，已禁言")
                 except Exception as e:
                     logger.warning(f"刷屏禁言失败：{e}")
@@ -540,7 +546,14 @@ class AdminPlugin(Star):
         yield event.image_result(url)
         # TODO 做张好看的图片来展示
 
+    @filter.event_message_type(filter.EventMessageType.ALL, property=1)
+    def init_curfew_manager(self, event: AiocqhttpMessageEvent):
+        "延时初始化宵禁管理器（不优雅的方案）"
+        if self.cm is None:
+            self.cm = CurfewManager(event.bot)
+
     @filter.command("开启宵禁")
+    @filter.event_message_type(filter.EventMessageType.GROUP_MESSAGE)
     @perm_required(PermLevel.ADMIN)
     async def start_curfew(
         self,
@@ -549,59 +562,34 @@ class AdminPlugin(Star):
         input_end_time: str | None = None,
     ):
         """开启宵禁 00:00 23:59，重启bot后宵禁任务会被清除"""
-
         group_id = event.get_group_id()
-
         start_time_str = (
             (input_start_time or self.night_start_time).strip().replace("：", ":")
         )
         end_time_str = (
             (input_end_time or self.night_end_time).strip().replace("：", ":")
         )
-        if (
-            group_id in self.curfew_managers
-            and self.curfew_managers[group_id].is_running()
-        ):
-            yield event.plain_result("本群已有宵禁任务在运行！请先关闭现有任务。")
-            return
-
-        try:
-            curfew_manager = CurfewManager(
-                bot=event.bot,
-                group_id=group_id,
-                start_time_str=start_time_str,
-                end_time_str=end_time_str,
-            )
-            await curfew_manager.start_curfew_task()
-            self.curfew_managers[group_id] = curfew_manager
-            yield event.plain_result(
-                f"已创建宵禁任务：{start_time_str}~{end_time_str}。"
-            )
-        except ValueError as e:
-            yield event.plain_result(f"时间格式不正确：{e}")
-        except Exception as e:
-            logger.error(f"启动宵禁任务失败 (群ID: {group_id}): {e}", exc_info=True)
-            yield event.plain_result("启动宵禁任务失败。")
+        if self.cm:
+            await self.cm.enable_curfew(group_id, start_time_str, end_time_str)
+            yield event.plain_result(f"本群宵禁创建：{start_time_str}~{end_time_str}")
+        else:
+            event.plain_result("宵禁管理器未初始化")
 
     @filter.command("关闭宵禁")
+    @filter.event_message_type(filter.EventMessageType.GROUP_MESSAGE)
     @perm_required(PermLevel.ADMIN)
     async def stop_curfew(self, event: AiocqhttpMessageEvent):
         """取消宵禁任务"""
         group_id = event.get_group_id()
-        if not group_id:
-            yield event.plain_result("无法获取群ID，操作失败。")
-            return
-        if (
-            group_id in self.curfew_managers
-            and self.curfew_managers[group_id].is_running()
-        ):
-            curfew_manager = self.curfew_managers[group_id]
-            await curfew_manager.stop_curfew_task()
-            del self.curfew_managers[group_id]
-            yield event.plain_result("已关闭本群的宵禁")
+        if self.cm:
+            result = await self.cm.disable_curfew(group_id)
+            if result:
+                yield event.plain_result("本群宵禁任务已取消")
+            else:
+                yield event.plain_result("本群没有宵禁任务")
+            event.stop_event()
         else:
-            yield event.plain_result("本群没有宵禁任务在运行")
-        event.stop_event()
+            event.plain_result("宵禁管理器未初始化")
 
     @filter.command("添加进群关键词")
     @perm_required(PermLevel.ADMIN)
@@ -894,9 +882,7 @@ class AdminPlugin(Star):
 
     async def terminate(self):
         """可选择实现异步的插件销毁方法，当插件被卸载/停用时会调用。"""
-        # 遍历所有宵禁管理器并停止它们
-        for group_id, manager in list(self.curfew_managers.items()):
-            if manager.is_running():
-                await manager.stop_curfew_task()
-            del self.curfew_managers[group_id]
+        # 停止所有宵禁任务进程
+        if self.cm:
+            await self.cm.stop_all_tasks()
         logger.info("插件 astrbot_plugin_QQAdmin 已被终止。")
