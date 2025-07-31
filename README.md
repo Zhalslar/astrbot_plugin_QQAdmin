@@ -77,6 +77,10 @@ git clone https://github.com/Zhalslar/astrbot_plugin_QQAdmin
 | `/清理群友 <未发言天数> <群等级>` | 清理群友，可指定未发言天数和群等级（默认30天、等级低于10） |
 | `/群管帮助` | 显示本插件的帮助信息 |
 
+## 常见问题
+
+Q: 格式校验未通过: ['错误的类型 forbidden_config.forbidden_words: 期望是 list, 得到了 str', '错误的类型 forbidden_config.forbidden_words: 期望是 list, 得到了 str']  
+A: 该问题为历史遗留问题，找到/AstrBot/data/config/astrbot_plugin_qqadmin_config.json，将 forbidden_words:"", 改成 forbidden_words": [],
 
 ## 🤝 配置
 
