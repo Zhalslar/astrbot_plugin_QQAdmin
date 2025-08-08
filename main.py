@@ -9,7 +9,7 @@ import time
 from aiocqhttp import CQHttp
 from astrbot import logger
 from astrbot.api.event import filter
-from astrbot.api.star import Context, Star, register
+from astrbot.api.star import Context, Star, StarTools,  register
 from astrbot.core import AstrBotConfig
 from astrbot.core.message.components import Plain
 from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
@@ -19,7 +19,6 @@ from astrbot.core.utils.session_waiter import (
     session_waiter,
     SessionController,
 )
-from astrbot.api.star import StarTools
 from astrbot.core.star.filter.event_message_type import EventMessageType
 from .core.curfew_manager import CurfewManager
 from .core.group_join_manager import GroupJoinManager
