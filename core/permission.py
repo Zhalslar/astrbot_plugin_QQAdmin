@@ -96,10 +96,12 @@ class PermissionManager:
             return PermLevel.UNKNOWN
         if str(user_id) in self.superusers:
             return PermLevel.SUPERUSER
-
-        info = await event.bot.get_group_member_info(
-            group_id=int(group_id), user_id=int(user_id), no_cache=True
-        )
+        try:
+            info = await event.bot.get_group_member_info(
+                group_id=int(group_id), user_id=int(user_id), no_cache=True
+            )
+        except Exception:
+            return PermLevel.UNKNOWN
         role = info.get("role", "unknown")
         level = int(info.get("level", 0))
         match role:
