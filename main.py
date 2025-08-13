@@ -34,7 +34,7 @@ from .core.utils import *
     "astrbot_plugin_QQAdmin",
     "Zhalslar",
     "群管插件，帮助你管理群聊",
-    "3.0.8",
+    "3.0.9",
     "https://github.com/Zhalslar/astrbot_plugin_QQAdmin",
 )
 class AdminPlugin(Star):
@@ -104,7 +104,7 @@ class AdminPlugin(Star):
             level_threshold=self.level_threshold,
         )
         # 初始化进群管理器
-        self.plugin_data_dir = StarTools.get_data_dir("astrbot_plugin_QQAdmin")
+        self.plugin_data_dir = str(StarTools.get_data_dir("astrbot_plugin_QQAdmin"))
         group_join_data = os.path.join(self.plugin_data_dir, "group_join_data.json")
         self.group_join_manager = GroupJoinManager(group_join_data)
         # 初始化宵禁管理器（延时初始化）
@@ -505,12 +505,13 @@ class AdminPlugin(Star):
         if not content:
             yield event.plain_result("你又不说要发什么群公告")
             return
+        image_path = None
         if image_url := extract_image_url(chain=event.get_messages()):
             temp_path = os.path.join(
                 self.plugin_data_dir,
-                "group_notice_image",
                 f"group_notice_image_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png",
             )
+            print("temp_path:", temp_path)
             image_path = await download_image(image_url, temp_path)
             if not image_path:
                 yield event.plain_result("图片获取失败")
@@ -738,7 +739,7 @@ class AdminPlugin(Star):
         if not text:
             return "未引用任何【进群申请】"
         lines = text.split("\n")
-        if "【收到进群申请】" in text and len(lines) >= 5:
+        if "【收到进群申请】" in text and len(lines) >= 4:
             nickname = lines[1].split("：")[1]  # 第2行冒号后文本为nickname
             flag = lines[3].split("：")[1]  # 第4行冒号后文本为flag
             try:
