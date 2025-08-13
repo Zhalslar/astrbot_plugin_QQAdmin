@@ -738,7 +738,7 @@ class AdminPlugin(Star):
         if not text:
             return "未引用任何【进群申请】"
         lines = text.split("\n")
-        if "【收到进群申请】" in text and len(lines) >= 5:
+        if "【收到进群申请】" in text and len(lines) >= 4:
             nickname = lines[1].split("：")[1]  # 第2行冒号后文本为nickname
             flag = lines[3].split("：")[1]  # 第4行冒号后文本为flag
             try:
