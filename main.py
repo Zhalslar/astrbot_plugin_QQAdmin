@@ -279,7 +279,7 @@ class AdminPlugin(Star):
             )
             yield event.plain_result(f"已将【{tid}-{target_name}】踢出本群并拉黑!")
 
-    @filter.command("设为管理员")
+    @filter.command("设为管理员", alias={"设置管理员", "添加管理员"})
     @perm_required(PermLevel.OWNER, check_at=False)
     async def set_group_admin(self, event: AiocqhttpMessageEvent):
         """设置管理员@user"""
