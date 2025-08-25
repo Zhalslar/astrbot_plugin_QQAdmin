@@ -37,62 +37,30 @@
     "invisible": true,
     "default": []
   },
-  "ban_time_setting": {
+  "ban_time": {
     "description": "随机禁言配置",
-    "type": "object",
-    "hint": "若禁言命令未指定禁言时长，则使用随机时长，时长范围如下",
-    "items": {
-      "ban_rand_time_min": {
-        "description": "随机禁言的最小时长",
-        "type": "int",
-        "hint": "单位：秒",
-        "default": 30
-      },
-      "ban_rand_time_max": {
-        "description": "随机禁言的最大时长",
-        "type": "int",
-        "hint": "单位：秒",
-        "default": 300
-      }
-    }
-  },
-  "night_ban_config": {
-    "description": "宵禁配置",
-    "type": "object",
-    "hint": "若禁言命令未指定禁言时长，则使用随机时长，时长范围如下",
-    "items": {
-      "night_start_time": {
-        "description": "默认的宵禁开始时间",
-        "type": "string",
-        "hint": "设置宵禁时，不指定开始时间时使用默认值，格式为HH:mm",
-        "default": "23:30"
-      },
-      "night_end_time": {
-        "description": "默认的宵禁结束时间",
-        "type": "string",
-        "hint": "设置宵禁时，不指定结束时间时使用默认值，格式为HH:mm",
-        "default": "6:00"
-      }
-    }
-  },
-  "forbidden_config": {
+    "type": "string",
+    "hint": "若禁言命令未指定禁言时长，则使用随机时长，时长范围如下，单位为秒，用~表示范围",
+    "default": "30~300"
+    },
+  "forbidden": {
     "description": "违禁词配置",
     "type": "object",
     "hint": "若禁言命令未指定禁言时长，则使用随机时长，时长范围如下",
     "items": {
-      "forbidden_words": {
+      "words": {
         "description": "违禁词",
         "type": "list",
         "hint": "包含关键词的消息将被撤回，并禁言发送者",
         "default": []
       },
-      "forbidden_words_group": {
+      "whitelist": {
         "description": "检测违禁词的群聊白名单",
         "type": "list",
         "hint": "仅检测白名单的群聊，留空表示检测所有群聊",
         "default": []
       },
-      "forbidden_words_ban_time": {
+      "ban_time": {
         "description": "违禁词禁言时长",
         "type": "int",
         "hint": "触发违禁词是禁言发送者，单位：秒，设置为0表示不禁言",
@@ -100,30 +68,30 @@
       }
     }
   },
-  "spamming_config": {
+  "spamming": {
     "description": "刷屏检测配置",
     "type": "object",
     "hint": "用于自动检测群成员连续发言是否构成刷屏行为，并执行禁言操作",
     "items": {
-      "min_count": {
+      "count": {
         "description": "刷屏判断的消息数量阈值",
         "type": "int",
         "hint": "当用户在短时间内连续发送至少该数量的消息时，触发刷屏检测, 填0表示不启用刷屏检测",
         "default": 0
       },
-      "min_interval": {
+      "interval": {
         "description": "连续消息的最大允许间隔",
         "type": "float",
         "hint": "单位：秒；若连续消息之间的时间间隔都小于该值，则视为刷屏",
         "default": 0.5
       },
-      "spamming_ban_time": {
+      "ban_time": {
         "description": "刷屏后的禁言时长",
         "type": "int",
         "hint": "单位：秒",
         "default": 600
       },
-      "spamming_group_whitelist": {
+      "whitelist": {
         "description": "刷屏检测群聊白名单",
         "type": "list",
         "hint": "仅在这些群里启用刷屏检测，留空表示全部群聊启用",
