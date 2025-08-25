@@ -468,7 +468,7 @@ class AdminPlugin(Star):
                 self.plugin_data_dir,
                 f"group_notice_image_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png",
             )
-            print("temp_path:", temp_path)
+            logger.debug("temp_path:", temp_path)
             image_path = await download_image(image_url, temp_path)
             if not image_path:
                 yield event.plain_result("图片获取失败")
@@ -567,7 +567,7 @@ class AdminPlugin(Star):
         else:
             yield event.plain_result("未指定要删除的关键词")
 
-    @filter.command("查看进群关键词")
+    @filter.command("进群关键词", alias={"查看进群关键词"})
     @perm_required(PermLevel.ADMIN)
     async def view_accept_keywords(self, event: AiocqhttpMessageEvent):
         """查看自动批准进群的关键词"""
@@ -600,7 +600,7 @@ class AdminPlugin(Star):
         self.group_join_manager.remove_reject_id(event.get_group_id(), ids)
         yield event.plain_result(f"已从黑名单中删除：{ids}")
 
-    @filter.command("查看进群黑名单")
+    @filter.command("进群黑名单", alias={"查看进群黑名单"})
     @perm_required(PermLevel.ADMIN)
     async def view_reject_ids(self, event: AiocqhttpMessageEvent):
         """查看进群黑名单"""
@@ -610,23 +610,23 @@ class AdminPlugin(Star):
             return
         yield event.plain_result(f"本群的进群黑名单：{ids}")
 
-    @filter.command("同意进群")
+    @filter.command("批准",alias={"同意进群"})
     @perm_required(PermLevel.ADMIN)
     async def agree_add_group(self, event: AiocqhttpMessageEvent, extra: str = ""):
-        """同意申请者进群"""
+        """批准进群申请"""
         reply = await self.approve(event=event, extra=extra, approve=True)
         if reply:
             yield event.plain_result(reply)
 
-    @filter.command("拒绝进群")
+    @filter.command("驳回", alias={"拒绝进群", "不批准"})
     @perm_required(PermLevel.ADMIN)
     async def refuse_add_group(self, event: AiocqhttpMessageEvent, extra: str = ""):
-        """拒绝申请者进群"""
+        """驳回进群申请"""
         reply = await self.approve(event=event, extra=extra, approve=False)
         if reply:
             yield event.plain_result(reply)
 
-    @filter.platform_adapter_type(filter.PlatformAdapterType.AIOCQHTTP)
+    @filter.event_message_type(filter.EventMessageType.GROUP_MESSAGE)
     async def event_monitoring(self, event: AiocqhttpMessageEvent):
         """监听进群/退群事件"""
         raw = getattr(event.message_obj, "raw_message", None)
@@ -634,7 +634,8 @@ class AdminPlugin(Star):
             return
 
         client = event.bot
-
+        group_id: int = raw.get("group_id", 0)
+        user_id: int = raw.get("user_id", 0)
         # 进群申请事件
         if (
             self.conf["enable_audit"]
@@ -642,14 +643,12 @@ class AdminPlugin(Star):
             and raw.get("request_type") == "group"
             and raw.get("sub_type") == "add"
         ):
-            user_id = str(raw.get("user_id", ""))
-            group_id = str(raw.get("group_id", ""))
             comment = raw.get("comment")
             flag = raw.get("flag", "")
-            nickname = (await client.get_stranger_info(user_id=int(user_id)))[
+            nickname = (await client.get_stranger_info(user_id=user_id))[
                 "nickname"
             ] or "未知昵称"
-            reply = f"【收到进群申请】同意进群吗：\n昵称：{nickname}\nQQ：{user_id}\nflag：{flag}"
+            reply = f"【进群申请】批准/驳回：\n昵称：{nickname}\nQQ：{user_id}\nflag：{flag}"
             if comment:
                 reply += f"\n{comment}"
             if self.conf["admin_audit"]:
@@ -657,12 +656,14 @@ class AdminPlugin(Star):
             else:
                 yield event.plain_result(reply)
 
-            if self.group_join_manager.should_reject(group_id, user_id):
+            if self.group_join_manager.should_reject(str(group_id), str(user_id)):
                 await client.set_group_add_request(
                     flag=flag, sub_type="add", approve=False, reason="黑名单用户"
                 )
                 yield event.plain_result("黑名单用户，已自动拒绝进群")
-            elif comment and self.group_join_manager.should_approve(group_id, comment):
+            elif comment and self.group_join_manager.should_approve(
+                str(group_id), comment
+            ):
                 await client.set_group_add_request(
                     flag=flag, sub_type="add", approve=True
                 )
@@ -675,16 +676,30 @@ class AdminPlugin(Star):
             and raw.get("notice_type") == "group_decrease"
             and raw.get("sub_type") == "leave"
         ):
-            group_id = str(raw.get("group_id", ""))
-            user_id = str(raw.get("user_id", ""))
-            nickname = (await client.get_stranger_info(user_id=int(user_id)))[
+            nickname = (await client.get_stranger_info(user_id=user_id))[
                 "nickname"
             ] or "未知昵称"
             reply = f"{nickname}({user_id}) 主动退群了"
             if self.conf["auto_black"]:
-                self.group_join_manager.blacklist_on_leave(group_id, user_id)
+                self.group_join_manager.blacklist_on_leave(str(group_id), str(user_id))
                 reply += "，已拉进黑名单"
             yield event.plain_result(reply)
+
+        # 进群禁言
+        elif (
+            raw.get("notice_type") == "group_increase"
+            and str(user_id) != event.get_self_id()
+        ):
+            yield event.plain_result(self.conf["increase"]["welcome"])
+            if self.conf["increase"]["ban_time"] > 0:
+                try:
+                    await client.set_group_ban(
+                        group_id=group_id,
+                        user_id=user_id,
+                        duration=self.conf["increase"]["ban_time"],
+                    )
+                except Exception:
+                    pass
 
     @staticmethod
     async def approve(
@@ -695,7 +710,7 @@ class AdminPlugin(Star):
         if not text:
             return "未引用任何【进群申请】"
         lines = text.split("\n")
-        if "【收到进群申请】" in text and len(lines) >= 4:
+        if "【进群申请】" in text and len(lines) >= 4:
             nickname = lines[1].split("：")[1]  # 第2行冒号后文本为nickname
             flag = lines[3].split("：")[1]  # 第4行冒号后文本为flag
             try:

@@ -1,114 +1,133 @@
 {
   "enable_audit": {
     "description": "启用进群审核",
-    "type": "bool",
     "hint": "当用户申请进群时，如果设置了进群关键词bot则会自动审核，没设置也会通知管理员",
+    "type": "bool",
     "default": true
   },
   "admin_audit": {
-      "description": "进群事件仅通知bot管理员",
-      "type": "bool",
-      "hint": "如果开启，则进群事件仅通知bot管理员，不再将通知发送在对应群聊",
-      "default": false
-    },
+    "description": "进群事件仅通知bot管理员",
+    "hint": "如果开启，则进群事件仅通知bot管理员，不再将通知发送在对应群聊",
+    "type": "bool",
+    "default": false
+  },
   "accept_keywords_list": {
     "description": "进群关键词数据",
-    "type": "list",
     "hint": "当用户进群时，会检查其消息是否包含关键词，若包含则会自动批准进群",
     "invisible": true,
+    "type": "list",
     "default": []
   },
   "enable_black": {
-      "description": "启用主动退群通知",
-      "type": "bool",
-      "hint": "当用户主动退群时，向群内通报",
-      "default": true
-    },
+    "description": "启用主动退群通知",
+    "hint": "当用户主动退群时，向群内通报",
+    "type": "bool",
+    "default": true
+  },
   "auto_black": {
     "description": "自动拉黑",
-    "type": "bool",
     "hint": "当用户主动退群时，是否自动拉黑（即添加到拒绝列表）",
-    "default": true
+    "type": "bool",
+    "default": false
   },
   "reject_ids_list": {
     "description": "拉黑列表",
-    "type": "list",
     "hint": "主动退群者将会被拉黑（即被添加到此列表）",
     "invisible": true,
+    "type": "list",
     "default": []
   },
   "ban_time": {
     "description": "随机禁言配置",
-    "type": "string",
     "hint": "若禁言命令未指定禁言时长，则使用随机时长，时长范围如下，单位为秒，用~表示范围",
+    "type": "string",
     "default": "30~300"
+  },
+  "increase": {
+    "description": "进群配置",
+    "hint": "若禁言命令未指定禁言时长，则使用随机时长，时长范围如下",
+    "type": "object",
+    "items": {
+    "ban_time": {
+      "description": "进群禁言时长",
+      "hint": "单位为秒，新成员进群时，bot会自动禁言该成员，并提醒新成员看群公告",
+      "type": "int",
+      "default": 0
     },
+    "welcome": {
+      "description": "进群欢迎词",
+      "hint": "发给新群友的欢迎词",
+      "type": "string",
+      "default": ""
+    }
+    }
+  },
   "forbidden": {
     "description": "违禁词配置",
-    "type": "object",
     "hint": "若禁言命令未指定禁言时长，则使用随机时长，时长范围如下",
+    "type": "object",
     "items": {
       "words": {
         "description": "违禁词",
-        "type": "list",
         "hint": "包含关键词的消息将被撤回，并禁言发送者",
+        "type": "list",
         "default": []
       },
       "whitelist": {
         "description": "检测违禁词的群聊白名单",
-        "type": "list",
         "hint": "仅检测白名单的群聊，留空表示检测所有群聊",
+        "type": "list",
         "default": []
       },
       "ban_time": {
         "description": "违禁词禁言时长",
-        "type": "int",
         "hint": "触发违禁词是禁言发送者，单位：秒，设置为0表示不禁言",
+        "type": "int",
         "default": 60
       }
     }
   },
   "spamming": {
     "description": "刷屏检测配置",
-    "type": "object",
     "hint": "用于自动检测群成员连续发言是否构成刷屏行为，并执行禁言操作",
+    "type": "object",
     "items": {
       "count": {
         "description": "刷屏判断的消息数量阈值",
-        "type": "int",
         "hint": "当用户在短时间内连续发送至少该数量的消息时，触发刷屏检测, 填0表示不启用刷屏检测",
+        "type": "int",
         "default": 0
       },
       "interval": {
         "description": "连续消息的最大允许间隔",
-        "type": "float",
         "hint": "单位：秒；若连续消息之间的时间间隔都小于该值，则视为刷屏",
+        "type": "float",
         "default": 0.5
       },
       "ban_time": {
         "description": "刷屏后的禁言时长",
-        "type": "int",
         "hint": "单位：秒",
+        "type": "int",
         "default": 600
       },
       "whitelist": {
         "description": "刷屏检测群聊白名单",
-        "type": "list",
         "hint": "仅在这些群里启用刷屏检测，留空表示全部群聊启用",
+        "type": "list",
         "default": []
       }
     }
   },
-  "level_threshold":{
+  "level_threshold": {
     "description": "高等级成员阈值设置",
-    "type": "int",
     "hint": "群等级高于此阈值的群成员，将被判定为“高等级成员”",
+    "type": "int",
     "default": 50
   },
   "perms": {
     "description": "命令权限设置",
-    "type": "object",
     "hint": "设置各个命令的使用权限",
+    "type": "object",
     "items": {
       "set_group_ban": {
         "description": "禁言",
