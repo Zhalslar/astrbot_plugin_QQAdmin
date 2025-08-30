@@ -34,8 +34,7 @@ from .core.utils import *
     "astrbot_plugin_QQAdmin",
     "Zhalslar",
     "群管插件，帮助你管理群聊",
-    "3.0.9",
-    "https://github.com/Zhalslar/astrbot_plugin_QQAdmin",
+    "v3.1.2",
 )
 class AdminPlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
@@ -83,7 +82,7 @@ class AdminPlugin(Star):
     async def set_group_ban(self, event: AiocqhttpMessageEvent, ban_time=None):
         """禁言 60 @user"""
         if not ban_time or not isinstance(ban_time, int):
-            ban_time = random.randint(*self.conf["ban_time"].split("-"))
+            ban_time = random.randint(*self.conf["ban_time"].split("~"))
         for tid in get_ats(event):
             try:
                 await event.bot.set_group_ban(
@@ -610,7 +609,7 @@ class AdminPlugin(Star):
             return
         yield event.plain_result(f"本群的进群黑名单：{ids}")
 
-    @filter.command("批准",alias={"同意进群"})
+    @filter.command("批准", alias={"同意进群"})
     @perm_required(PermLevel.ADMIN)
     async def agree_add_group(self, event: AiocqhttpMessageEvent, extra: str = ""):
         """批准进群申请"""
