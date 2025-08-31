@@ -82,7 +82,7 @@ class AdminPlugin(Star):
     async def set_group_ban(self, event: AiocqhttpMessageEvent, ban_time=None):
         """禁言 60 @user"""
         if not ban_time or not isinstance(ban_time, int):
-            ban_time = random.randint(*self.conf["ban_time"].split("~"))
+            ban_time = random.randint(*parse_time_range(self.conf["ban_time"]))
         for tid in get_ats(event):
             try:
                 await event.bot.set_group_ban(
@@ -101,7 +101,7 @@ class AdminPlugin(Star):
     ):
         """禁我 60"""
         if not ban_time or not isinstance(ban_time, int):
-            ban_time = random.randint(*self.conf["ban_time"].split("~"))
+            ban_time = random.randint(*parse_time_range(self.conf["ban_time"]))
         try:
             await event.bot.set_group_ban(
                 group_id=int(event.get_group_id()),
