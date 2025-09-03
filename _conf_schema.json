@@ -48,18 +48,18 @@
     "hint": "若禁言命令未指定禁言时长，则使用随机时长，时长范围如下",
     "type": "object",
     "items": {
-    "ban_time": {
-      "description": "进群禁言时长",
-      "hint": "单位为秒，新成员进群时，bot会自动禁言该成员，并提醒新成员看群公告",
-      "type": "int",
-      "default": 0
-    },
-    "welcome": {
-      "description": "进群欢迎词",
-      "hint": "发给新群友的欢迎词",
-      "type": "string",
-      "default": ""
-    }
+      "ban_time": {
+        "description": "进群禁言时长",
+        "hint": "单位为秒，新成员进群时，bot会自动禁言该成员，并提醒新成员看群公告",
+        "type": "int",
+        "default": 0
+      },
+      "welcome": {
+        "description": "进群欢迎词",
+        "hint": "发给新群友的欢迎词",
+        "type": "string",
+        "default": ""
+      }
     }
   },
   "forbidden": {
@@ -67,15 +67,15 @@
     "hint": "若禁言命令未指定禁言时长，则使用随机时长，时长范围如下",
     "type": "object",
     "items": {
-      "words": {
-        "description": "违禁词",
-        "hint": "包含关键词的消息将被撤回，并禁言发送者",
+      "whitelist": {
+        "description": "检测违禁词的群聊白名单",
+        "hint": "仅检测白名单的群聊，留空则关闭违禁词检测（注意老版本是留空则全部群聊启用，根据用户反馈体验极差，故作更改）",
         "type": "list",
         "default": []
       },
-      "whitelist": {
-        "description": "检测违禁词的群聊白名单",
-        "hint": "仅检测白名单的群聊，留空表示检测所有群聊",
+      "words": {
+        "description": "违禁词",
+        "hint": "包含关键词的消息将被撤回，并禁言发送者",
         "type": "list",
         "default": []
       },
@@ -92,6 +92,12 @@
     "hint": "用于自动检测群成员连续发言是否构成刷屏行为，并执行禁言操作",
     "type": "object",
     "items": {
+      "whitelist": {
+        "description": "刷屏检测群聊白名单",
+        "hint": "仅在这些群里启用刷屏检测，留空则关闭刷屏检测（注意老版本是留空则全部群聊启用，根据用户反馈体验极差，故作更改）",
+        "type": "list",
+        "default": []
+      },
       "count": {
         "description": "刷屏判断的消息数量阈值",
         "hint": "当用户在短时间内连续发送至少该数量的消息时，触发刷屏检测, 填0表示不启用刷屏检测",
@@ -109,12 +115,6 @@
         "hint": "单位：秒",
         "type": "int",
         "default": 600
-      },
-      "whitelist": {
-        "description": "刷屏检测群聊白名单",
-        "hint": "仅在这些群里启用刷屏检测，留空则关闭刷屏检测（注意老版本是留空则全部群聊启用，根据用户反馈体验极差，故作更改）",
-        "type": "list",
-        "default": []
       }
     }
   },

@@ -343,16 +343,12 @@ class AdminPlugin(Star):
             yield event.plain_result(f"已从{count}条消息中撤回{delete_count}条")
 
     @filter.event_message_type(EventMessageType.GROUP_MESSAGE)
-    @perm_required(PermLevel.ADMIN)
     async def check_forbidden_words(self, event: AiocqhttpMessageEvent):
         """
         自动检测违禁词，撤回并禁言
         """
         # 群聊白名单
-        if (
-            self.conf["forbidden"]["whitelist"]
-            and event.get_group_id() not in self.conf["forbidden"]["whitelist"]
-        ):
+        if  event.get_group_id() not in self.conf["forbidden"]["whitelist"]:
             return
         if not self.conf["forbidden"]["words"] or not event.message_str:
             return
@@ -375,6 +371,7 @@ class AdminPlugin(Star):
                             duration=self.conf["forbidden"]["ban_time"],
                         )
                     except Exception:
+                        logger.error(f"bot在群{event.get_group_id()}权限不足，禁言失败")
                         pass
                 break
 
@@ -421,8 +418,8 @@ class AdminPlugin(Star):
                     )
                     nickname = await get_nickname(event, sender_id)
                     yield event.plain_result(f"检测到{nickname}刷屏，已禁言")
-                except Exception as e:
-                    logger.warning(f"刷屏禁言失败：{e}")
+                except Exception:
+                    logger.error(f"bot在群{group_id}权限不足，禁言失败")
                 timestamps.clear()
 
     @filter.command("设置群头像")
