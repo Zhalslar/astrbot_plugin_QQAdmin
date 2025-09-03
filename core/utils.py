@@ -154,9 +154,4 @@ def extract_image_url(chain: list[BaseMessageComponent]) -> str | None:
     return None
 
 
-def parse_time_range(config_str, default_min=60, default_max=120) -> Tuple[int, int]:
-    """解析时间范围, 分隔符为 '-' 或 '~'"""
-    parts = [int(p) for p in config_str.replace("~", "-").split("-") if p.isdigit()]
-    min_value = parts[0] if parts else default_min
-    max_value = parts[1] if len(parts) > 1 else default_max
-    return tuple(sorted([min_value, max_value])) # type: ignore
+

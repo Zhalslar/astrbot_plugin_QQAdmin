@@ -125,8 +125,6 @@ class PermissionManager:
         perm_key: str,
         check_at: bool = True,
     ) -> str | None:
-        logger.debug(f"权限输入：{perm_key} {bot_perm}")
-
         user_level = await self.get_perm_level(event, user_id=event.get_sender_id())
 
         required_level = self.perms.get(perm_key)

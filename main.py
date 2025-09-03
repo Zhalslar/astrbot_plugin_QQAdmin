@@ -82,7 +82,9 @@ class AdminPlugin(Star):
     async def set_group_ban(self, event: AiocqhttpMessageEvent, ban_time=None):
         """禁言 60 @user"""
         if not ban_time or not isinstance(ban_time, int):
-            ban_time = random.randint(*parse_time_range(self.conf["ban_time"]))
+            ban_time = random.randint(
+                *map(int, self.conf["random_ban_time"].split("~"))
+            )
         for tid in get_ats(event):
             try:
                 await event.bot.set_group_ban(
@@ -101,7 +103,9 @@ class AdminPlugin(Star):
     ):
         """禁我 60"""
         if not ban_time or not isinstance(ban_time, int):
-            ban_time = random.randint(*parse_time_range(self.conf["ban_time"]))
+            ban_time = random.randint(
+                *map(int, self.conf["random_ban_time"].split("~"))
+            )
         try:
             await event.bot.set_group_ban(
                 group_id=int(event.get_group_id()),
@@ -232,7 +236,7 @@ class AdminPlugin(Star):
             )
             yield event.plain_result(f"已将【{tid}-{target_name}】踢出本群并拉黑!")
 
-    @filter.command("设为管理员", alias={"设置管理员", "添加管理员"})
+    @filter.command("上管", alias={"设置管理员", "添加管理员", "设为管理员"})
     @perm_required(PermLevel.OWNER, check_at=False)
     async def set_group_admin(self, event: AiocqhttpMessageEvent):
         """设置管理员@user"""
@@ -243,7 +247,7 @@ class AdminPlugin(Star):
             chain = [At(qq=tid), Plain(text="你已被设为管理员")]
             yield event.chain_result(chain)
 
-    @filter.command("取消管理员")
+    @filter.command("下管", alias={"取消管理员"})
     @perm_required(PermLevel.OWNER)
     async def cancel_group_admin(self, event: AiocqhttpMessageEvent):
         """取消管理员@user"""
@@ -254,7 +258,7 @@ class AdminPlugin(Star):
             chain = [At(qq=tid), Plain(text="你的管理员身份已被取消")]
             yield event.chain_result(chain)
 
-    @filter.command("设为精华", alias={"设精"})
+    @filter.command("设精", alias={"设为精华"})
     @perm_required(PermLevel.ADMIN)
     async def set_essence_msg(self, event: AiocqhttpMessageEvent):
         """将引用消息添加到群精华"""
@@ -264,7 +268,7 @@ class AdminPlugin(Star):
             yield event.plain_result("已设为精华消息")
             event.stop_event()
 
-    @filter.command("移除精华", alias={"移精"})
+    @filter.command("移精", alias={"移除精华"})
     @perm_required(PermLevel.ADMIN)
     async def delete_essence_msg(self, event: AiocqhttpMessageEvent):
         """将引用消息移出群精华"""
@@ -375,7 +379,6 @@ class AdminPlugin(Star):
                 break
 
     @filter.event_message_type(filter.EventMessageType.GROUP_MESSAGE)
-    @perm_required(PermLevel.ADMIN)
     async def spamming_ban(self, event: AiocqhttpMessageEvent):
         """刷屏检测与禁言"""
         group_id = event.get_group_id()
@@ -386,10 +389,7 @@ class AdminPlugin(Star):
             or len(event.get_messages()) == 0
         ):
             return
-        if (
-            self.conf["spamming"]["whitelist"]
-            and group_id not in self.conf["spamming"]["whitelist"]
-        ):
+        if group_id not in self.conf["spamming"]["whitelist"]:
             return
         now = time.time()
 
