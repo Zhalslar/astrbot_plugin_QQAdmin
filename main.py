@@ -49,6 +49,8 @@ class AdminPlugin(Star):
         self.last_banned_time: dict[str, dict[str, float]] = defaultdict(
             lambda: defaultdict(float)
         )
+        # 延时初始化宵禁管理器
+        self.curfew_mgr = None
 
     async def initialize(self):
         # 初始化权限管理器
@@ -62,17 +64,10 @@ class AdminPlugin(Star):
         group_join_data = os.path.join(self.plugin_data_dir, "group_join_data.json")
         self.group_join_manager = GroupJoinManager(group_join_data)
 
-        # 初始化宵禁管理器
-        self.bots = []
-        for platform in self.context.platform_manager.platform_insts:
-            if platform.meta().name == "aiocqhttp":
-                self.bots.append(platform.get_client())
-        # 临时方案： 使用第一个bot
-        self.curfew_mgr = CurfewManager(self.bots[0])
-
         # 概率打印LOGO（qwq）
         if random.random() < 0.01:
             print_logo()
+
 
     async def _send_admin(self, client: CQHttp, message: str):
         """向bot管理员发送私聊消息"""
@@ -509,6 +504,12 @@ class AdminPlugin(Star):
         yield event.image_result(url)
         # TODO 做张好看的图片来展示
 
+    @filter.platform_adapter_type(filter.PlatformAdapterType.AIOCQHTTP)
+    @filter.event_message_type(filter.EventMessageType.ALL, priority=1)
+    def init_curfew_manager(self, event: AiocqhttpMessageEvent):
+        "延时初始化宵禁管理器（不优雅的方案）"
+        if not self.curfew_mgr and hasattr(event, "bot"):
+            self.curfew_mgr = CurfewManager(event.bot)
 
     @filter.command("开启宵禁")
     @filter.event_message_type(filter.EventMessageType.GROUP_MESSAGE)
