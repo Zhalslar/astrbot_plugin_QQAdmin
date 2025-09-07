@@ -39,6 +39,7 @@ from .core.utils import *
 class AdminPlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
+        self.context = context
         self.conf = config
         self.admins_id: list[str] = context.get_config().get("admins_id", [])
 
@@ -60,8 +61,15 @@ class AdminPlugin(Star):
         self.plugin_data_dir = str(StarTools.get_data_dir("astrbot_plugin_QQAdmin"))
         group_join_data = os.path.join(self.plugin_data_dir, "group_join_data.json")
         self.group_join_manager = GroupJoinManager(group_join_data)
-        # 初始化宵禁管理器（延时初始化）
-        self.cm = None
+
+        # 初始化宵禁管理器
+        self.bots = []
+        for platform in self.context.platform_manager.platform_insts:
+            if platform.meta().name == "aiocqhttp":
+                self.bots.append(platform.get_client())
+        # 临时方案： 使用第一个bot
+        self.curfew_mgr = CurfewManager(self.bots[0])
+
         # 概率打印LOGO（qwq）
         if random.random() < 0.01:
             print_logo()
@@ -342,6 +350,7 @@ class AdminPlugin(Star):
 
             yield event.plain_result(f"已从{count}条消息中撤回{delete_count}条")
 
+    @filter.platform_adapter_type(filter.PlatformAdapterType.AIOCQHTTP)
     @filter.event_message_type(EventMessageType.GROUP_MESSAGE)
     async def check_forbidden_words(self, event: AiocqhttpMessageEvent):
         """
@@ -375,6 +384,7 @@ class AdminPlugin(Star):
                         pass
                 break
 
+    @filter.platform_adapter_type(filter.PlatformAdapterType.AIOCQHTTP)
     @filter.event_message_type(filter.EventMessageType.GROUP_MESSAGE)
     async def spamming_ban(self, event: AiocqhttpMessageEvent):
         """刷屏检测与禁言"""
@@ -499,11 +509,6 @@ class AdminPlugin(Star):
         yield event.image_result(url)
         # TODO 做张好看的图片来展示
 
-    @filter.event_message_type(filter.EventMessageType.ALL, priority=1)
-    def init_curfew_manager(self, event: AiocqhttpMessageEvent):
-        "延时初始化宵禁管理器（不优雅的方案）"
-        if self.cm is None:
-            self.cm = CurfewManager(event.bot)
 
     @filter.command("开启宵禁")
     @filter.event_message_type(filter.EventMessageType.GROUP_MESSAGE)
@@ -514,15 +519,15 @@ class AdminPlugin(Star):
         input_start_time: str | None = None,
         input_end_time: str | None = None,
     ):
-        """开启宵禁 00:00 23:59，重启bot后宵禁任务会被清除"""
+        """开启宵禁 00:00 23:59"""
         group_id = event.get_group_id()
         if not input_start_time or not input_end_time:
             yield event.plain_result("未输入范围 HH:MM HH:MM")
             return
         start_time_str = input_start_time.strip().replace("：", ":")
         end_time_str = (input_end_time).strip().replace("：", ":")
-        if self.cm:
-            await self.cm.enable_curfew(group_id, start_time_str, end_time_str)
+        if self.curfew_mgr:
+            await self.curfew_mgr.enable_curfew(group_id, start_time_str, end_time_str)
             yield event.plain_result(f"本群宵禁创建：{start_time_str}~{end_time_str}")
         else:
             event.plain_result("宵禁管理器未初始化")
@@ -533,8 +538,8 @@ class AdminPlugin(Star):
     async def stop_curfew(self, event: AiocqhttpMessageEvent):
         """取消宵禁任务"""
         group_id = event.get_group_id()
-        if self.cm:
-            result = await self.cm.disable_curfew(group_id)
+        if self.curfew_mgr:
+            result = await self.curfew_mgr.disable_curfew(group_id)
             if result:
                 yield event.plain_result("本群宵禁任务已取消")
             else:
@@ -622,6 +627,7 @@ class AdminPlugin(Star):
         if reply:
             yield event.plain_result(reply)
 
+    @filter.platform_adapter_type(filter.PlatformAdapterType.AIOCQHTTP)
     @filter.event_message_type(filter.EventMessageType.GROUP_MESSAGE)
     async def event_monitoring(self, event: AiocqhttpMessageEvent):
         """监听进群/退群事件"""
@@ -850,6 +856,6 @@ class AdminPlugin(Star):
     async def terminate(self):
         """可选择实现异步的插件销毁方法，当插件被卸载/停用时会调用。"""
         # 停止所有宵禁任务进程
-        if self.cm:
-            await self.cm.stop_all_tasks()
+        if self.curfew_mgr:
+            await self.curfew_mgr.stop_all_tasks()
         logger.info("插件 astrbot_plugin_QQAdmin 已被终止。")

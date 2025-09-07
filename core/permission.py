@@ -171,6 +171,10 @@ def perm_required(
         ) -> AsyncGenerator[Any, Any]:
             perm_manager = PermissionManager.get_instance()
 
+            # 仅限aiocqhttp
+            if event.platform_meta.name != "aiocqhttp":
+                return
+
             # 仅限群聊
             if event.is_private_chat():
                 return
