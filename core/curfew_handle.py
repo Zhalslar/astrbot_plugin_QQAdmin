@@ -14,7 +14,6 @@ from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
 
 # 创建北京时区对象 (UTC+8)
 BEIJING_TIMEZONE = timezone(timedelta(hours=8))
-CURFEW_DATA_PATH = Path("data/curfew_tasks.json")
 
 class Curfew:
     """
@@ -65,7 +64,6 @@ class Curfew:
 
         self._active = True
         self.curfew_task = asyncio.create_task(self._scheduler_loop())
-        logger.info(f"群 {self.group_id} 的宵禁任务已启动。")
 
     async def stop_curfew_task(self):
         """停止宵禁后台调度任务。"""
@@ -89,7 +87,7 @@ class Curfew:
         logger.info(f"群 {self.group_id} 的宵禁任务已停止。")
 
     async def _scheduler_loop(self):
-        """宵禁后台调度器，使用时间差计算代替循环检查"""
+        """宵禁后台调度器"""
         logger.info(
             f"群 {self.group_id} 宵禁调度循环开始，北京时间段：{self.start_time.strftime('%H:%M')}~{self.end_time.strftime('%H:%M')}"
         )
@@ -156,7 +154,7 @@ class Curfew:
             self.curfew_task = None
 
     async def _enable_curfew(self):
-        """启用宵禁（内部方法）"""
+        """启用宵禁"""
         try:
             await self.bot.send_group_msg(
                 group_id=int(self.group_id),
@@ -169,7 +167,7 @@ class Curfew:
             logger.error(f"群 {self.group_id} 宵禁开启失败: {e}", exc_info=True)
 
     async def _disable_curfew(self):
-        """禁用宵禁（内部方法）"""
+        """禁用宵禁"""
         try:
             await self.bot.send_group_msg(
                 group_id=int(self.group_id),
@@ -189,17 +187,17 @@ class CurfewManager:
 
     def __init__(self, bot):
         self.bot = bot
+        self.curfew_data_path = Path("data/curfew_tasks.json")
         self.tasks: dict[str, Curfew] = {}
         self.load_tasks()
 
     def load_tasks(self):
         """从JSON加载所有宵禁任务（用于重启恢复）"""
-        if not CURFEW_DATA_PATH.exists():
-            logger.info("未找到宵禁数据文件，跳过加载。")
+        if not self.curfew_data_path.exists():
             return
 
         try:
-            with open(CURFEW_DATA_PATH, "r", encoding="utf-8") as f:
+            with open(self.curfew_data_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
         except Exception as e:
             logger.error(f"加载宵禁任务失败：{e}", exc_info=True)
@@ -215,15 +213,14 @@ class CurfewManager:
                 )
                 self.tasks[group_id] = cw
                 asyncio.create_task(cw.start_curfew_task())
-                logger.info(f"群 {group_id} 的宵禁任务已恢复。")
             except Exception as e:
                 logger.error(f"恢复群 {group_id} 的宵禁任务失败：{e}", exc_info=True)
 
     def save_tasks(self):
         """将当前所有任务信息保存到JSON"""
         try:
-            CURFEW_DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
-            with open(CURFEW_DATA_PATH, "w", encoding="utf-8") as f:
+            self.curfew_data_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(self.curfew_data_path, "w", encoding="utf-8") as f:
                 json.dump(
                     {
                         gid: {
@@ -236,7 +233,7 @@ class CurfewManager:
                     ensure_ascii=False,
                     indent=2,
                 )
-            logger.info("宵禁任务数据已保存。")
+            logger.info("宵禁任务数据已保存")
         except Exception as e:
             logger.error(f"保存宵禁任务失败：{e}", exc_info=True)
 
@@ -288,7 +285,7 @@ class CurfewHandle:
         input_start_time: str | None = None,
         input_end_time: str | None = None,
     ):
-        """开启宵禁 00:00 23:59"""
+        """开启宵禁任务"""
         group_id = event.get_group_id()
         if not input_start_time or not input_end_time:
             await event.send(event.plain_result("未输入范围 HH:MM HH:MM"))

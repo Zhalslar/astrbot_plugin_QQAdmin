@@ -1,4 +1,3 @@
-
 import random
 from astrbot import logger
 from astrbot.api.event import filter
@@ -7,7 +6,9 @@ from astrbot.core import AstrBotConfig
 from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
     AiocqhttpMessageEvent,
 )
-from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_platform_adapter import AiocqhttpAdapter
+from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_platform_adapter import (
+    AiocqhttpAdapter,
+)
 from astrbot.core.star.filter.event_message_type import EventMessageType
 from data.plugins.astrbot_plugin_QQAdmin.core.enhance_handel import EnhanceHandle
 from data.plugins.astrbot_plugin_QQAdmin.utils import ADMIN_HELP, print_logo
@@ -22,13 +23,7 @@ from .permission import (
     perm_required,
 )
 
-
-@register(
-    "astrbot_plugin_QQAdmin",
-    "Zhalslar",
-    "群管插件，帮助你管理群聊",
-    "v3.1.3",
-)
+@register("astrbot_plugin_QQAdmin", "Zhalslar", "...", "...")
 class QQAdminPlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
