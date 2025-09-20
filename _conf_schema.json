@@ -63,7 +63,7 @@
     }
   },
   "forbidden": {
-    "description": "违禁词配置",
+    "description": "违禁词禁言配置",
     "hint": "若禁言命令未指定禁言时长，则使用随机时长，时长范围如下",
     "type": "object",
     "items": {
@@ -88,7 +88,7 @@
     }
   },
   "spamming": {
-    "description": "刷屏检测配置",
+    "description": "刷屏禁言配置",
     "hint": "用于自动检测群成员连续发言是否构成刷屏行为，并执行禁言操作",
     "type": "object",
     "items": {
@@ -113,6 +113,19 @@
       "ban_time": {
         "description": "刷屏后的禁言时长",
         "hint": "单位：秒",
+        "type": "int",
+        "default": 600
+      }
+    }
+  },
+  "vote_ban": {
+    "description": "投票禁言配置",
+    "hint": "用于投票禁言",
+    "type": "object",
+    "items": {
+      "ttl": {
+        "description": "投票过期时间",
+        "hint": "过期的投票将被终止",
         "type": "int",
         "default": 600
       }
@@ -524,6 +537,42 @@
           "成员"
         ],
         "default": "高等级成员"
+      },
+      "start_vote_mute": {
+        "description": "投票禁言",
+        "type": "string",
+        "options": [
+          "超管",
+          "群主",
+          "管理员",
+          "高等级成员",
+          "成员"
+        ],
+        "default": "成员"
+      },
+      "agree_vote_mute": {
+        "description": "赞同禁言",
+        "type": "string",
+        "options": [
+          "超管",
+          "群主",
+          "管理员",
+          "高等级成员",
+          "成员"
+        ],
+        "default": "成员"
+      },
+      "disagree_vote_mute": {
+        "description": "反对禁言",
+        "type": "string",
+        "options": [
+          "超管",
+          "群主",
+          "管理员",
+          "高等级成员",
+          "成员"
+        ],
+        "default": "成员"
       }
     }
   }

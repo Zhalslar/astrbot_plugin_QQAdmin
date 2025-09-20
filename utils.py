@@ -1,6 +1,5 @@
 from datetime import datetime
 import os
-from typing import Tuple
 
 from aiohttp import ClientSession
 from astrbot.core.message.components import At, BaseMessageComponent, Image, Reply
@@ -33,8 +32,8 @@ ADMIN_HELP = (
     "- 申请头衔 <新头衔> - 设置自己的群头衔\n"
     "- 踢了 @<用户> - 将指定用户踢出群聊\n"
     "- 拉黑 @<用户> - 将指定用户踢出群聊并拉黑\n"
-    "- 设置管理员 @<用户> - 设置指定用户为管理员\n"
-    "- 取消管理员 @<用户> - 取消指定用户的管理员身份\n"
+    "- 上管 @<用户> - 设置指定用户为管理员\n"
+    "- 下管 @<用户> - 取消指定用户的管理员身份\n"
     "- 设为精华 - 将引用的消息设置为群精华\n"
     "- 移除精华 - 将引用的消息移出群精华\n"
     "- 查看精华 - 查看群精华消息列表\n"

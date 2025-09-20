@@ -5,7 +5,12 @@ from pathlib import Path
 from typing import Optional
 
 from aiocqhttp import CQHttp
-from astrbot import logger
+from astrbot.api import logger
+from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
+    AiocqhttpMessageEvent,
+)
+
+
 
 # 创建北京时区对象 (UTC+8)
 BEIJING_TIMEZONE = timezone(timedelta(hours=8))
@@ -270,3 +275,47 @@ class CurfewManager:
     def get_task(self, group_id: str) -> Curfew | None:
         """获取某个群的宵禁管理器（供外部调用）"""
         return self.tasks.get(group_id)
+
+
+class CurfewHandle:
+    def __init__(self, client: CQHttp):
+        self.curfew_mgr = CurfewManager(client)
+        self.curfew_mgr.load_tasks()
+
+    async def start_curfew(
+        self,
+        event: AiocqhttpMessageEvent,
+        input_start_time: str | None = None,
+        input_end_time: str | None = None,
+    ):
+        """开启宵禁 00:00 23:59"""
+        group_id = event.get_group_id()
+        if not input_start_time or not input_end_time:
+            await event.send(event.plain_result("未输入范围 HH:MM HH:MM"))
+            return
+        start_time_str = input_start_time.strip().replace("：", ":")
+        end_time_str = (input_end_time).strip().replace("：", ":")
+        if self.curfew_mgr:
+            await self.curfew_mgr.enable_curfew(group_id, start_time_str, end_time_str)
+            await event.send(event.plain_result(f"本群宵禁创建：{start_time_str}~{end_time_str}"))
+        else:
+            event.plain_result("宵禁管理器未初始化")
+
+    async def stop_curfew(self, event: AiocqhttpMessageEvent):
+        """取消宵禁任务"""
+        group_id = event.get_group_id()
+        if self.curfew_mgr:
+            result = await self.curfew_mgr.disable_curfew(group_id)
+            if result:
+                await event.send(event.plain_result("本群宵禁任务已取消"))
+            else:
+                await event.send(event.plain_result("本群没有宵禁任务"))
+            event.stop_event()
+        else:
+            await event.send(event.plain_result("宵禁管理器未初始化"))
+
+    async def stop_all_tasks(self):
+        """关闭并保存所有宵禁任务"""
+        for cw in self.curfew_mgr.tasks.values():
+            await cw.stop_curfew_task()
+        self.curfew_mgr.save_tasks()
