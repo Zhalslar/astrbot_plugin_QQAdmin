@@ -1,3 +1,4 @@
+import asyncio
 from collections import defaultdict, deque
 import random
 import time
@@ -98,11 +99,6 @@ class EnhanceHandle:
                     logger.error(f"bot在群{group_id}权限不足，禁言失败")
                 timestamps.clear()
 
-    def _cleanup_expired(self, group_id: str):
-        """清理该群已过期投票"""
-        record = self.vote_cache.get(group_id)
-        if record and record["expire"] < time.time():
-            del self.vote_cache[group_id]
 
     async def start_vote_mute(self, event, ban_time: int | None = None):
         """
@@ -113,43 +109,66 @@ class EnhanceHandle:
             return
         target_id = target_ids[0]
         if not ban_time or not isinstance(ban_time, int):
-            ban_time = random.randint(
-                *map(int, self.conf["random_ban_time"].split("~"))
-            )
+            ban_time = random.randint(*map(int, self.conf["random_ban_time"].split("~")))
         group_id = event.get_group_id()
-        voter_id = event.get_sender_id()
-
-        # 清理该群过期投票
-        self._cleanup_expired(group_id)
 
         if group_id in self.vote_cache:
             await event.send(event.plain_result("群内已有正在进行的禁言投票"))
             return
 
         # 动态计算 threshold
-        # base=3票，每增加5分钟禁言，票数+1，限制在3~10票之间
         base_threshold = 3
         max_threshold = 10
         threshold = base_threshold + ban_time // 300  # 每 300s 增加 1 票
         threshold = max(base_threshold, min(threshold, max_threshold))
 
-        # 创建新投票
         expire_at = time.time() + self.conf["vote_ban"]["ttl"]
         self.vote_cache[group_id] = {
             "target": target_id,
-            "votes": {voter_id: True},  # True=赞同, False=反对
+            "votes": {},
             "ban_time": ban_time,
             "expire": expire_at,
             "threshold": threshold,
         }
 
         nickname = await get_nickname(event, target_id)
-        ttl_minutes = self.conf["vote_ban"]["ttl"] / 60
         await event.send(
             event.plain_result(
-                f"已发起对 {nickname} 的禁言投票，有效期 {ttl_minutes} 分钟，输入“赞同禁言/反对禁言”进行表态。"
+                f"已发起对 {nickname} 的禁言投票(禁言{ban_time}秒)，输入“赞同禁言/反对禁言”进行表态，{self.conf['vote_ban']['ttl']}秒后结算"
             )
         )
+
+        # ===== 新增：定时结算逻辑 =====
+        async def settle_vote():
+            await asyncio.sleep(self.conf["vote_ban"]["ttl"])
+            record = self.vote_cache.get(group_id)
+            if not record:
+                return  # 已被提前结算
+            votes = list(record["votes"].values())
+            agree_count = sum(votes)
+            disagree_count = len(votes) - agree_count
+            nickname2 = await get_nickname(event, record["target"])
+
+            # 到期按多数票决定（平票视为否决）
+            if agree_count > disagree_count:
+                try:
+                    await event.bot.set_group_ban(
+                        group_id=int(group_id),
+                        user_id=int(record["target"]),
+                        duration=record["ban_time"],
+                    )
+                    await event.send(event.plain_result(f"投票时间到！已禁言{nickname2}"))
+                except Exception:
+                    logger.error(f"bot在群{group_id}权限不足，禁言失败")
+            else:
+                await event.send(
+                    event.plain_result(f"投票时间到！禁言被否决，{nickname2}安全了")
+                )
+            # 清理投票记录
+            del self.vote_cache[group_id]
+
+        asyncio.create_task(settle_vote())
+
 
     async def vote_mute(self, event: AiocqhttpMessageEvent, agree: bool):
         """
@@ -159,9 +178,6 @@ class EnhanceHandle:
         group_id = event.get_group_id()
         voter_id = event.get_sender_id()
 
-        # 清理过期投票
-        self._cleanup_expired(group_id)
-
         record = self.vote_cache.get(group_id)
         if not record:
             await event.send(event.plain_result("当前没有进行中的禁言投票"))
@@ -169,14 +185,21 @@ class EnhanceHandle:
 
         threshold = record["threshold"]
         target_id = record["target"]
+
+        # 目标不能投票（提前检查，避免把目标的票计入）
+        if voter_id == target_id:
+            await event.send(event.plain_result("你不能参与投票"))
+            return
+
+        # 记录/更新该用户的立场
         record["votes"][voter_id] = agree
 
         votes = list(record["votes"].values())
         agree_count = sum(votes)
         disagree_count = len(votes) - agree_count
-
         nickname = await get_nickname(event, target_id)
 
+        # 提前达成赞同阈值 → 立即禁言
         if agree_count >= threshold:
             try:
                 await event.bot.set_group_ban(
@@ -188,16 +211,17 @@ class EnhanceHandle:
             except Exception:
                 logger.error(f"bot在群{group_id}权限不足，禁言失败")
             finally:
+                # 清理记录（定时任务见前面会检测到记录已删除并直接返回）
                 del self.vote_cache[group_id]
             return
 
+        # 提前达成反对阈值 → 立即否决
         if disagree_count >= threshold:
-            await event.send(
-                event.plain_result(f"禁言投票被否决，{nickname}安全了")
-            )
+            await event.send(event.plain_result(f"禁言投票被否决，{nickname}安全了"))
             del self.vote_cache[group_id]
             return
 
+        # 否则展示当前进度
         await event.send(
             event.plain_result(
                 f"禁言【{nickname}】：\n赞同({agree_count}/{threshold})\n反对({disagree_count}/{threshold})"
